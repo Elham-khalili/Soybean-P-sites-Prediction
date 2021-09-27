@@ -1,1 +1,1 @@
-# Soybean-P-site-prediction
+# Soybean-P-sites-Prediction
