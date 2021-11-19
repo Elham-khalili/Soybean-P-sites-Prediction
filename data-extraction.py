@@ -42,7 +42,21 @@ for wlen in wlens:
     wlen2 = int((wlen-1)/2)
     posdf = pd.DataFrame(columns=('id','seq','loc'))
     negdf = pd.DataFrame(columns=('id','seq','loc'))
+    
+    flag = np.zeros((len(seqNames),))
     for i in range(len(seqNames)):
+            seq = seqPrs[i]
+            ind = np.where(names == seqNames[i])[0] #finding postive locations
+            ind = loc[ind]-1
+            s = 0
+            for j in range(len(seq)):
+                if seq[j] == 'Y' or seq[j] == 'T' or seq[j] == 'S':
+                    if j in ind:
+                        s =s +1
+            if s>=3:
+                flag[i] = 1
+    for i in range(len(seqNames)):
+        print(i)
         seq = seqPrs[i]
         ind = np.where(names == seqNames[i])[0] #finding postive locations
         ind = loc[ind]-1
@@ -58,7 +72,8 @@ for wlen in wlens:
                 if j in ind:
                     posdf = posdf.append({'id':seqNames[i], 'seq':wseq,'loc':j},ignore_index=True)
                 else:
-                    negdf = negdf.append({'id':seqNames[i], 'seq':wseq,'loc':j},ignore_index=True)
+                    if flag[i] ==1: #there is atleast 3 p-site in the seq
+                        negdf = negdf.append({'id':seqNames[i], 'seq':wseq,'loc':j},ignore_index=True)
     
     
     ############################################## PSSM loading pos
@@ -233,7 +248,8 @@ for wlen in wlens:
             ind = np.where(allthree == sq[j]+sq[j+1]+sq[j+2])[0][0]
             threemer[i,ind] = threemer[i,ind] + 1
         threemer[i,:] = threemer[i,:] / len(sq)
-            
+    
+    
     ponemer = pd.DataFrame(data = onemer, columns = prta)
     ptwomer = pd.DataFrame(data = twomer, columns = alltwo)
     pthreemer = pd.DataFrame(data = threemer, columns = allthree)
@@ -258,7 +274,36 @@ for wlen in wlens:
     
     posdf_pssm.to_csv('./Psites - data/pos_pssm_'+str(wlen)+'.csv')
     negdf_pssm.to_csv('./Psites - data/neg_pssm_'+str(wlen)+'.csv')
-                
+    
+    
+    ################################# other features - physicochemical
+    cols = ['Hydrophobicity index','Hydrophilicity scale','Buriability', 'Residue volume','Polarity','Localized electrical effect','Alpha-CH chemical shifts','Alpha-helix indices','Beta-strand indices','Aperiodic indices','Relative mutability','Optical rotation','Graph shape index','Solvation free energy','Net charge','HPLC parameter']
+    ofvalues =pd.read_csv('sixteen kinds of the physiochemical property.csv')
+    pcfeatures_pos = np.zeros([len(seqs),wlen*16]).values
+    seqs = posdf['seq'].values
+    for i in range(len(seqs)):
+        sq = seqs[i]
+        k=0
+        for feat in range(16):
+            for j in range(len(sq)):
+                ind = np.where(ofvalues[:,0] == 'E')[0][0]
+                pcfeatures_pos[i,k] = ofvalues[ind][feat]
+                k=k+1
+    pcfeatures_neg = np.zeros([len(seqs),wlen*16]).values
+    seqs = negdf['seq'].values 
+    for i in range(len(seqs)):
+        sq = seqs[i]
+        k=0
+        for feat in range(16):
+            for j in range(len(sq)):
+                ind = np.where(ofvalues[:,0] == 'E')[0][0]
+                pcfeatures_neg[i,k] = ofvalues[ind][feat]
+                k=k+1
+    pofeat = pd.DataFrame(data = pcfeatures_pos, columns = cols)
+    nofeat = pd.DataFrame(data = pcfeatures_neg, columns = cols)
+    pofeat.to_csv('./Psites - data/pos_pcfeat_'+str(wlen)+'.csv')
+    nofeat.to_csv('./Psites - data/neg_pcfeat_'+str(wlen)+'.csv')
+    
     del posdf,posdf_onemer, posdf_pssm, posdf_threemer, posdf_twomer
     del negdf, negdf_onemer, negdf_pssm, negdf_threemer, negdf_twomer
     del ponemer, pthreemer, ptwomer

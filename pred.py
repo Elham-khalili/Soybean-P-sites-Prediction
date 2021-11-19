@@ -51,7 +51,7 @@ def testv1(method ='rf',wlen=21, feat_type='1mer'):
     nfeatl = np.ones((len(nfeat),))
   #  nfeat = nfeat[:,4:]
     
-    num_itr = 1
+    num_itr = 10
     wdata_all = np.concatenate((pfeat,nfeat))
     wlabel_all = np.concatenate((pfeatl,nfeatl))
         
@@ -89,6 +89,7 @@ def testv1(method ='rf',wlen=21, feat_type='1mer'):
                importances.append(np.reshape(model.coef_,(len(feat,))))
             elif method == 'svm':
                model = svm.SVC(kernel = 'linear',probability=True).fit(tr,trl)
+               #model = svm.SVC(kernel = 'rbf',probability=True).fit(tr,trl)
                importances.append(np.reshape(model.coef_,(len(feat,))))
             elif method == 'tabnet':
                 model = TabNetTest(tr,trl)
@@ -169,6 +170,9 @@ def feat_prep(feat_type='All',wlen=21):
     pdf_pssm = pdf_pssm.drop(columns = ['Unnamed: 0','loc','id','seq'],axis=1)
     ndf_pssm = ndf_pssm.drop(columns = ['Unnamed: 0','loc','id','seq'],axis=1)
     
+    pdf_pc = pd.read_csv('./Psites - data/pos_pcfeat_'+str(wlen)+'.csv')
+    ndf_pc = pd.read_csv('./Psites - data/neg_pcfeat_'+str(wlen)+'.csv')
+    
     if feat_type == '1mer':
         pfeat = pdf_1mer
         nfeat = ndf_1mer
@@ -188,17 +192,22 @@ def feat_prep(feat_type='All',wlen=21):
     elif feat_type == 'pssm':
         pfeat = pdf_pssm
         nfeat = ndf_pssm
-    elif feat_type == 'All':
+    elif feat_type == 'All':#no chemicophysical
         pfeat = pd.concat([pdf_1mer,pdf_2mer,pdf_3mer,pdf_pssm],ignore_index=True,axis=1)
         nfeat = pd.concat([ndf_1mer,ndf_2mer,ndf_3mer,ndf_pssm],ignore_index=True,axis=1)
+    else:#with chemicophysical
+        pdf_pc.drop(columns = ['Unnamed: 0'],axis=1,inplace=True)
+        ndf_pc.drop(columns = ['Unnamed: 0'],axis=1,inplace=True)
+        pfeat = pd.concat([pdf_1mer,pdf_2mer,pdf_3mer,pdf_pssm,pdf_pc],ignore_index=True,axis=1)
+        nfeat = pd.concat([ndf_1mer,ndf_2mer,ndf_3mer,ndf_pssm,ndf_pc],ignore_index=True,axis=1)
     del pdf_1mer,pdf_2mer,pdf_3mer,pdf_pssm, ndf_1mer,ndf_2mer,ndf_3mer,ndf_pssm
     pfeat = pfeat.astype(np.float16)
     nfeat = nfeat.astype(np.float16)
     return pfeat, nfeat
 
-methods = ['tabnet']#,'lr-l1','lr-l2','rf','gbt']
-features_type =['All']#,'1mer','2mer','3mer','1-2mer','1-2-3mer','pssm']
-wlen = [13]#7,9,11,13,17,19,21,23,25,27,29,31,33,35]
+methods = ['SVM','lr-l1','lr-l2','rf','gbt','tabnet']
+features_type =['1mer','2mer','3mer','1-2mer','1-2-3mer','pssm','All','allll']
+wlen = [7,9,11,13,17,19,21,23,25,27,29,31,33,35]
 for d in wlen:
     file = open('./' +str(d) + '_performance.txt',"a")
     file.write('Method, Accuracy, Sensitivity, Specificity, AUC, Precision, Negative Predictive Value, F1 Score, MCC \n')
